@@ -1,0 +1,52 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>ESP32-Cam WebInterface</title>
+        <meta name='viewport' content='width=device-width, initial-scale=1'>
+        <style>
+            .main {
+                margin: auto;
+                width: 75%;
+            }
+            .title {
+                text-align: center;
+                display: flex;
+                justify-content: center;
+            }
+            .camera {
+                display: flex;
+                justify-content: center;
+            }
+            .camera image {
+                width: 100%;
+            }
+            .refresh {
+                padding-top: 2rem;
+                display: flex;
+                justify-content: center;
+            }
+        </style>
+        <script>
+            function refreshPhoto() {
+                var source = 'latest-photo.jpg',
+                timestamp = (new Date()).getTime(),
+                newUrl = source + '?_=' + timestamp;
+                document.getElementById('photo').src = newUrl;
+            }
+            setInterval(refreshPhoto, 5000);
+        </script>
+    </head>
+    <body>
+        <div class='main'>
+            <div class='title'>
+                <h1>Latest photo captured by ESP32 Camera</h1>
+            </div>
+            <div class='camera'>
+                <image id='photo' src='latest-photo.jpg' width='75%' />
+            </div>
+            <div class='refresh'>
+                <button onclick='refreshPhoto();'>Refresh (auto every 5s)</button>
+            </div>
+        </div>
+    </body>
+</html>
