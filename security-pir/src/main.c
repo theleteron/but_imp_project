@@ -25,6 +25,7 @@
 #include "esp_http_client.h"
 // ================================================================
 
+
 // ============================ SYSTEM ============================
 #define DEVICE          "[ESP32 PIR]"
 // ============================= GPIO =============================
@@ -39,7 +40,9 @@ esp_ip4_addr_t my_ip;
 esp_ip4_addr_t gateway;
 // ================================================================
 
+
 const TickType_t delay = 250 / portTICK_PERIOD_MS;              // 0.25s
+
 
 // ============================= WIFI =============================
 /**
@@ -58,8 +61,8 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base,
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         my_ip = event->ip_info.ip;
         gateway = event->ip_info.gw;
-        ESP_LOGI(DEVICE, "got ip:" IPSTR, IP2STR(&my_ip));
-        ESP_LOGI(DEVICE, "got gw:" IPSTR, IP2STR(&gateway));
+        ESP_LOGI(DEVICE, "[WIFI] IP:\t" IPSTR, IP2STR(&my_ip));
+        ESP_LOGI(DEVICE, "[WIFI] GATEWAY:\t" IPSTR, IP2STR(&gateway));
     }
 }
 
@@ -145,7 +148,9 @@ esp_err_t http_event_handler(esp_http_client_event_t *evt) {
 void send_request_to_camera() {
     char local_response_buffer[2048] = {0};
     char temp_url[50];
+
     sprintf(temp_url, "http://%d.%d.%d.%d/take-photo", IP2STR(&gateway));
+    
     esp_http_client_config_t config = {
         .url = temp_url,
         .method = HTTP_METHOD_GET,
@@ -202,9 +207,9 @@ void app_main() {
     while(1) {  
         if (gpio_get_level(PIR_GPIO)) {
             timestamp = esp_timer_get_time();
-            ESP_LOGI(DEVICE, "Motion detected at %lli!", timestamp);
+            ESP_LOGI(DEVICE, "[PIR] Motion detected at %lli!", timestamp);
             gpio_set_level(LED_GPIO, 1);
-            ESP_LOGI(DEVICE, "Sending signal to the camera!");
+            ESP_LOGI(DEVICE, "[PIR] Sending signal to the camera!");
             send_request_to_camera();
             vTaskDelay(delay);
             gpio_set_level(LED_GPIO, 0);
