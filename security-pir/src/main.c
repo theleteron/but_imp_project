@@ -201,9 +201,9 @@ void app_main() {
         if (gpio_get_level(PIR_GPIO)) {
             timestamp = esp_timer_get_time();
             ESP_LOGI(DEVICE, "Motion detected at %lli!", timestamp);
+            gpio_set_level(LED_GPIO, 1);
             ESP_LOGI(DEVICE, "Sending signal to the camera!");
             send_request_to_camera();
-            gpio_set_level(LED_GPIO, 1);
             vTaskDelay(delay);
             gpio_set_level(LED_GPIO, 0);
         } else {
