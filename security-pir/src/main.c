@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2021
  * 
  */
-// SYSTEM
+// ============================ SYSTEM ============================
 #include <stdio.h>
 #include <string.h>
 #include <freertos/FreeRTOS.h>
@@ -16,26 +16,28 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-// GPIO pins
+// ============================= GPIO =============================
 #include <driver/gpio.h>
-// WIFI
+// ============================= WIFI =============================
 #include "esp_wifi.h"
-// HTTP requests
+// ============================= HTTP =============================
 #include "esp_tls.h"
 #include "esp_http_client.h"
+// ================================================================
 
-
+// ============================ SYSTEM ============================
 #define DEVICE          "[ESP32 PIR]"
-
+// ============================= GPIO =============================
 #define LED_GPIO        GPIO_NUM_2                              // GPIO pin number for sending OUTPUT signal to LED
 #define PIR_GPIO        GPIO_NUM_39                             // GPIO pin number for receiveing INPUT signal from PIR
-
+// ============================= WIFI =============================
 #define WIFI_SSID       "ESP32-Cam AP"
-
+// ============================= HTTP =============================
 #define DEFAULT_GW      "192.168.4.1"
 #define DEFAULT_PORT    "80"
 esp_ip4_addr_t my_ip;
 esp_ip4_addr_t gateway;
+// ================================================================
 
 const TickType_t delay = 250 / portTICK_PERIOD_MS;              // 0.25s
 
