@@ -1,0 +1,415 @@
+\documentclass{article}
+\usepackage[T1]{fontenc} 
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage[english]{babel}
+\usepackage{rotating}
+\usepackage[colorlinks]{hyperref}
+\usepackage[english, boxed]{algorithm2e}
+\usepackage{listings}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\begin{document}
+    %%%%%%%%%%%%%%%%%%%%%%%%% TITLE PAGE %%%%%%%%%%%%%%%%%%%%%%%%%
+    \begin{titlepage}
+        \centering
+        \includegraphics[scale=0.1,keepaspectratio]{img/logo_en.png}
+        \vspace{5cm}
+        
+        {\textbf{\Huge Security system based on ESP32}}
+        
+        \vspace{0.25cm}
+        {\LARGE 2021/2022}
+        \vspace{1cm}
+        
+        {\textbf{\LARGE Microprocessors and Embedded Systems}}
+        \vspace{0.25cm}
+        
+        
+        {\LARGE Project documentation}
+        \vspace{1cm}
+        
+        {\Large Roman Janiczek (xjanic25)}
+        
+        \vspace{1cm}
+        {\large \today}
+    
+    \end{titlepage}
+    
+    \newpage
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%% CONTENT %%%%%%%%%%%%%%%%%%%%%%%%%%
+    \clearpage
+    \tableofcontents
+    \thispagestyle{empty}
+    %%%%%%%%%%%%%%%%%%%%%%%% INTRODUCTION %%%%%%%%%%%%%%%%%%%%%%%%
+    \clearpage
+    \pagenumbering{arabic}
+    \setcounter{page}{1}
+    
+    \section{Introduction}
+    This project aims to create a simple security system that 
+    consists of one PIR sensor and a camera. The system should also
+    have WiFi AP capabilities to view captured pictures on the 
+    webserver running in this internal network.
+    
+    For this, we will be using \verb|WeMos D1 R32 UNO ESP32|,    \\
+    \verb|AM312 PIR Motion sensor| and \verb|AI-Thinker's ESP32-CAM|.
+    
+    \subsection{WeMos D1 R32 UNO ESP32}
+    \verb|WeMos D1 R32 UNO ESP32| is par of ESP32 series.
+    This is a series low-cost, low-power MCUs with integrated Wi-Fi
+    and Bluetooth.\footnote{\url{https://en.wikipedia.org/wiki/ESP32}}
+    
+    \subsection{AI-Thinker's ESP32-CAM}
+    \verb|AI-Thinker's ESP32-CAM| is ESP32-based small sized camera 
+    with integrated Wi-Fi and support for TF cards.\footnote{\url{https://docs.ai-thinker.com/en/esp32-cam}}
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%% DESIGN %%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \section{Design}
+    The system will consist of two parts that will be interconnected.
+    \begin{itemize}
+        \item Motion detection
+        \item Camera and AP
+    \end{itemize}
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[scale=0.43,keepaspectratio]{img/circuit.png}
+        \caption{Connection diagram}\label{pic:connection_diagram}
+    \end{figure} 
+    
+    \subsection{Motion detection}
+    Motion detection will be realized using \verb|AM312 PIR Motion sensor|\\
+    and a \verb|WeMos D1 R32 UNO ESP32|.
+    
+    The motion detection model attempts to connect to
+    a local WiFi created by a camera module as a first step. 
+    This will allow it to send information about a detected motion 
+    to the camera.
+    
+    Detected motion sends a signal from a PIR sensor to an ESP32 unit
+    that creates an HTTP request for a second ESP32 unit (Camera), 
+    informing it about this event.
+    
+    \subsubsection{Process of detecting movement}
+    \begin{itemize}
+        \item Wait for a movement (loop waiting)
+        \item Receive signal from a PIR sensor
+        \item Blink debug LED to let us know about detection
+        \item Send signal over HTTP to camera
+        \item Process response and go back to waiting
+    \end{itemize}
+    
+    \subsection{Camera and AP}
+    The camera module is responsible for creating a local WiFi network
+    . This module also serves as a web server that
+    displays the latest captured photo.
+    
+    Another functionality of the camera module and its primary purpose is
+    capturing and saving a photo after receiving the signal 
+    from a motion detection module.
+    
+    \subsubsection{Process of capturing a photo}
+    \begin{itemize}
+        \item Receive signal over HTTP about a movement
+        \item Capture a photo (do not retry if failed)
+        \item Save a photo to a memory
+        \item Send a response to the motion detection module
+            (information about the status of photo capture)
+    \end{itemize}
+    
+    \subsubsection{Process of presenting a photo}
+    \begin{itemize}
+        \item Listens for requests to a web server
+        \item Receive a request for a latest photo
+        \item Load the photo from a memory
+        \item Display it on the main page
+            (or send to a requester depends on request
+            URL)
+    \end{itemize}
+    
+    %%%%%%%%%%%%%%%%%%%%%%% IMPLEMENTATION %%%%%%%%%%%%%%%%%%%%%%%
+    \section{Implementation}
+    
+    \subsection{Used technologies}
+    Implementation of this system was realized using 
+    \href{https://docs.espressif.com/projects/esp-idf/en/latest/esp32/}{ESP-IDF}
+    \footnote{\url{https://docs.espressif.com/projects/esp-idf/en/latest/esp32/}}
+    , programming language \href{https://www.iso.org/standard/74528.html}{C}
+    \footnote{\url{https://www.iso.org/standard/74528.html}} and 
+    \href{https://docs.platformio.org/en/latest/integration/ide/vscode.html}{PlatformIO in VSCode}
+    \footnote{\url{https://docs.platformio.org/en/latest/integration/ide/vscode.html}}.
+    
+    \subsection{Motion detection}
+    \subsubsection{PIR sensor}
+    GPIO first had to be chosen and configured as an input to use PIR sensor.
+    For this, GPIO39 was selected. At the same time, debug LED output was configured
+    on GPIO2.
+    \begin{lstlisting}[language=C]
+#include <driver/gpio.h>
+
+#define LED_GPIO GPIO_NUM_2
+#define PIR_GPIO GPIO_NUM_39
+
+// Setup OUTPUT
+gpio_pad_select_gpio(LED_GPIO);
+gpio_set_direction(LED_GPIO, GPIO_MODE_OUTPUT);
+gpio_set_level(LED_GPIO, 0);
+// Setup INPUT
+gpio_pad_select_gpio(PIR_GPIO);
+gpio_set_direction(PIR_GPIO, GPIO_MODE_INPUT);
+    \end{lstlisting}
+    
+    After correct configuration of INPUT GPIO it is left running
+    in infinite while loop where it checks if a signal has been received.
+    If it detects signal it blinks with debug LED and calls function
+    to send HTTP request to camera.
+    \begin{lstlisting}[language=C]
+while(1) {  
+    if (gpio_get_level(PIR_GPIO)) {
+        timestamp = esp_timer_get_time();
+        gpio_set_level(LED_GPIO, 1);
+        send_request_to_camera();
+        vTaskDelay(delay);
+        gpio_set_level(LED_GPIO, 0);
+    } else {
+        gpio_set_level(LED_GPIO, 0);
+        vTaskDelay(delay);
+    }
+}
+    \end{lstlisting}
+    
+    To prevent it from sending too much requests processing is delayed
+    for 1s using function \verb|vTaskDelay()| and const delay.
+    \begin{lstlisting}[language=C]
+const TickType_t delay = 1000 / portTICK_PERIOD_MS;
+    \end{lstlisting}
+    
+    
+    \subsubsection{Wireless connection (WiFi STA)}
+    Connection to existing WiFi AP is realized using library \verb|"esp_wifi.h"|
+    and official example code\footnote{\url{https://github.com/espressif/esp-idf/blob/5c33570524118873f7bd32490c7a0442fede4bf8/examples/wifi/fast_scan/main/fast_scan.c}}.
+    Default SSID for AP is hardcoded. Our IP and a gateway are
+    saved for further use later in a program during connection.
+    \begin{lstlisting}[language=C]
+#define WIFI_SSID       "ESP32-Cam AP"
+.
+my_ip = event->ip_info.ip;
+gateway = event->ip_info.gw;
+    \end{lstlisting}
+    
+    \subsubsection{HTTP requests}
+    Sending of a signal to a camera is realized using HTTP request. This functionality
+    can be implemented using library \verb|"esp_http_client.h"|. For this project was
+    used modified official example code\footnote{\url{https://github.com/espressif/esp-idf/blob/5c33570524118873f7bd32490c7a0442fede4bf8/examples/protocols/esp_http_client/main/esp_http_client_example.c}}.
+    Here comes a previously saved gateway address into play - in this system, the gateway is always
+    the camera module. The gateway address is taken as a host and appended \verb|/pir| path.
+    HTTP client is configured with this newly created URL, initiated and called. 
+    (Called only on PIR event)
+    \begin{lstlisting}[language=C]
+char temp_url[50];
+sprintf(temp_url, "http://%d.%d.%d.%d/take-photo", IP2STR(&gateway));
+    
+esp_http_client_config_t config = {
+    .url = temp_url,
+    .method = HTTP_METHOD_GET,
+    \end{lstlisting}
+
+    \begin{lstlisting}[language=C]
+esp_http_client_handle_t client = esp_http_client_init(&config);
+esp_err_t err = esp_http_client_perform(client);
+    \end{lstlisting}
+    
+    An HTTP request uses the method GET due to problems encountered with the POST method.
+    
+    \clearpage
+    \subsection{Camera and AP}
+    \subsubsection{Wireless connection (WiFi AP)}
+    Camera module servers as the main hub of the system as such it's this module
+    that creates WiFi AP. Library \verb|"esp_wifi.h"| is used here as well but this time
+    during configuration we chose AP mode.
+    \begin{lstlisting}[language=C]
+esp_netif_create_default_wifi_ap();
+    \end{lstlisting}
+    \begin{lstlisting}[language=C]
+wifi_config_t custom_config = {
+    .ap = {
+        .ssid = WIFI_SSID,
+        .ssid_len = strlen(WIFI_SSID),
+        .channel = WIFI_CHAN,
+        .max_connection = WIFI_MSCO,
+        .authmode = WIFI_AUTH_OPEN      // Do not require password
+    },
+};
+ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &custom_config));
+ESP_ERROR_CHECK(esp_wifi_start());
+    \end{lstlisting}
+    
+    \subsubsection{Storage}
+    Due to problems encountered when trying to store pictures on an SD card or SPIFFS
+    \footnote{\url{https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/storage/spiffs.html}},
+     I decided to implement the last taken photo storage as a temporary global
+     variable that is rewritten when a new photo is taken. This decision also makes it easier
+     to serve this photo on the webserver.
+     \begin{lstlisting}[language=C]
+/**
+ * Latest photo store 
+ */
+size_t taken_photo_len = 0;
+size_t taken_photo_width = 0;
+size_t taken_photo_height = 0;
+pixformat_t taken_photo_format = PIXFORMAT_JPEG;
+uint8_t *taken_photo_buf = NULL; 
+    \end{lstlisting}
+    \begin{lstlisting}[language=C]
+if (taken_photo_buf != NULL) {
+    free(taken_photo_buf);
+}
+taken_photo_buf = malloc(photo->len);
+mempcpy(taken_photo_buf, photo->buf, photo->len);
+
+taken_photo_format = photo->format;
+taken_photo_len = photo->len;
+taken_photo_width = photo->width;
+taken_photo_height = photo->height;
+    \end{lstlisting}
+    
+    \subsubsection{Camera}
+    To initialize the camera, a correct pin schema was needed. This was obtained from ESP-IDF GitHub\footnote{\url{https://github.com/espressif/esp32-camera/blob/master/examples/main/take_picture.c}}.
+    I have also decided to enable flash when camera is taking pictures which allows for better visibility
+    during night or in dark rooms.
+    \begin{lstlisting}[language=C]
+gpio_set_level(4, 1);
+vTaskDelay(delay);
+camera_fb_t *photo = esp_camera_fb_get();
+gpio_set_level(4, 0);
+    \end{lstlisting}
+    
+    \subsubsection{Webserver}
+    Webserver as de facto main 'brain' of the whole system which allows the processing of PIR event and is also
+    serving latest taken photo is implemented using \verb|"esp_http_server.h"|\footnote{\url{https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_server.html}} library from ESP-IDF.
+    
+    The webserver is served on the default IP address of the camera module \verb|192.168.4.1| and allows for the following paths:
+    \begin{itemize}
+        \item \verb|/| - main page which displays latest taken photo and automatically refreshes every 5 seconds
+        \item \verb|/latest-photo.jpg| - server latest photo captured by PIR event directly
+        \item \verb|/take-photo| - captures a new photo and displays it directly; this photo is not saved anywhere and does not replace
+        the latest photo captured by the PIR event
+        \item \verb|/pir| - is used by motion sensor module as an endpoint for sending a signal about the PIR event
+    \end{itemize}
+    
+    All of those endpoints are calling handler functions that are responsible for providing correct data.
+    \begin{lstlisting}[language=C]
+httpd_uri_t index_get = {
+    .uri      = "/",
+    .method   = HTTP_GET,
+    .handler  = get_handler,
+    .user_ctx = NULL
+};
+httpd_register_uri_handler(server, &index_get);
+httpd_uri_t latest_get = {
+    .uri      = "/latest-photo.jpg",
+    .method   = HTTP_GET,
+    .handler  = img_handler,
+    .user_ctx = NULL
+};
+httpd_register_uri_handler(server, &latest_get);
+httpd_uri_t pir_post = {
+    .uri      = "/pir",
+    .method   = HTTP_GET,
+    .handler  = pir_handler,
+    .user_ctx = NULL
+};
+httpd_register_uri_handler(server, &pir_post);
+httpd_uri_t take_post = {
+    .uri      = "/take-photo",
+    .method   = HTTP_GET,
+    .handler  = take_handler,
+    .user_ctx = NULL
+};
+httpd_register_uri_handler(server, &take_post);
+    \end{lstlisting}
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%% CONCLUSION %%%%%%%%%%%%%%%%%%%%%%%%%
+    \clearpage
+    \section{Conclusion}
+    In conclusion this project was a lot of fun as it allowed me to learn a lot about 
+    ESP32 lower lever programming as compared to Arduino framework.
+    The only thing that should be fixed that I'm aware of is the lack of archiving older photos on SD card or some other media.
+    
+    \subsubsection{Notes}
+    Due to problem with programmer for \verb|AI-Thinker's ESP32-CAM| which cause following error to appear a lot even 
+    when following correct procedure, programming and testing anything on \verb|AI-Thinker's ESP32-CAM| was incredibly difficult and time consuming.
+    \begin{lstlisting}
+Traceback (most recent call last):
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 4582, in <module>
+    _main()
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 4575, in _main
+    main()
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 4074, in main
+    esp = esp or get_default_connected_device(ser_list, port=args.port, connect_attempts=args.connect_attempts,
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 121, in get_default_connected_device
+    _esp.connect(before, connect_attempts)
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 632, in connect
+    last_error = self._connect_attempt(mode=mode, esp32r0_delay=True, usb_jtag_serial=usb_jtag_serial)
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 596, in _connect_attempt
+    self.sync()
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 486, in sync
+    val, _ = self.command(self.ESP_SYNC, b'\x07\x07\x12\x20' + 32 * b'\x55',
+File "C:\Users\roman\.platformio\packages\tool-esptoolpy\esptool.py", line 418, in command
+    self._port.timeout = new_timeout
+File "C:\Users\roman\.platformio\penv\lib\site-packages\serial\serialutil.py", line 372, in timeout
+    self._reconfigure_port()
+File "C:\Users\roman\.platformio\penv\lib\site-packages\serial\serialwin32.py", line 222, in _reconfigure_port
+    raise SerialException(
+serial.serialutil.SerialException: Cannot configure port, something went wrong. Original message: PermissionError(13, 'Access is denied.', None, 5)
+*** [upload] Error 1
+    \end{lstlisting}
+    
+    %%%%%%%%%%%%%%%%%%%%%%%% ATTACHMENTS %%%%%%%%%%%%%%%%%%%%%%%%%
+    \clearpage
+    \section{Attachments}
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[scale=0.35,keepaspectratio]{img/webservermain.png}
+        \caption{Main page of webserver}\label{pic:webserverindex}
+    \end{figure} 
+    \begin{figure}[h!]
+        \centering
+        \includegraphics[scale=0.43,keepaspectratio]{img/pirevent.png}
+        \caption{Logged PIR event on motion detection module}\label{pic:pireventlog}
+    \end{figure} 
+    %%%%%%%%%%%%%%%%%%%%%%%% BIBLIOGRAPHY %%%%%%%%%%%%%%%%%%%%%%%%
+    \clearpage
+    %bibliographystyle{englishiso}
+    %renewcommand{\refname}{Bibliography}
+    %bibliography{documentation}
+	
+\end{document}
