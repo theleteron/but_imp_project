@@ -186,7 +186,7 @@ void send_request_to_camera() {
     char local_response_buffer[2048] = {0};
     char temp_url[50];
 
-    sprintf(temp_url, "http://%d.%d.%d.%d/take-photo", IP2STR(&gateway));
+    sprintf(temp_url, "http://%d.%d.%d.%d/pir", IP2STR(&gateway));
     
     esp_http_client_config_t config = {
         .url = temp_url,
